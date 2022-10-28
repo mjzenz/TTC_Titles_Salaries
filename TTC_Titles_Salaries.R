@@ -2,7 +2,7 @@
 library(dplyr)
 library(readr)
 
-Title_Salary_Data <- read_csv("~/Downloads/All Faculty and Staff Title and Salary Information - Post-TTC and Pre-TTC.xlsx - Post-Nov.7, 2021 (Post-TTC).csv")
+Title_Salary_Data <- read_csv("Salary_2022-08.csv")
 
 
 
@@ -17,5 +17,8 @@ title.salary.dist <- Title_Salary_Data %>%
                               n = n_distinct(paste(`First Name`, `Last Name`)))
 
 write.csv(title.salary.dist, file = "Title_Salary_Quartiles.csv", row.names = FALSE)
+
+
+
 
                     
