@@ -1,0 +1,95 @@
+---
+title: "Trends in UW Salaries"
+author: "Michael J Zenz"
+format:
+  html:
+    self-contained: true
+---
+
+This is a report of UW-Madison salaries using public information obtained and  posted by UFAS.
+
+
+```{r}
+#| label: setup
+#| echo: false
+#| warning: false
+
+library(tidyverse)
+library(readxl)
+library(stringr)
+library(janitor)
+library(kableExtra)
+
+filenames <- list.files("SalaryFiles", pattern="*.xlsx", full.names=TRUE)
+
+for(i in 1:length(filenames)){
+  #i <- 5
+  x <- read_excel(filenames[i]) |>
+        janitor::clean_names() |>
+        mutate(Date = str_extract(filenames[i], "(\\d)+-\\d+")) 
+  if(i > 1){
+    salaries <- bind_rows(x, salaries)
+  }else{
+    salaries <- x
+  }
+}
+
+salaries <-   salaries|>
+  select(Date, first_name, last_name, division, department, 
+         title, full_time_equivalent, annual_fte_adjusted_salary,
+         current_annual_contracted_salary) |>
+  mutate(annual_fte_adjusted_salary = ifelse(is.na(annual_fte_adjusted_salary), 
+          current_annual_contracted_salary * full_time_equivalent, 
+          annual_fte_adjusted_salary)) |>
+  select(-current_annual_contracted_salary) 
+
+
+
+```
+
+
+## L&S SAA Salaries
+
+
+```{r}
+#| label: tbl-AIM_salaries
+#| tbl-cap: Comparions between trends in AIM and other SAA salaries/FTE.
+#| echo: false
+#| warning: false
+
+
+
+#AIM salaries as a percentage of SAA salaries
+AIM.salaries <- salaries |>
+  filter(division == "College of Letters & Science") |>
+  filter(department == "Admin:Student Academic Affairs") |>
+  mutate(AIM = last_name %in% c("ZENZ", "MCMILLAN", "SCHUTH", "PFLIEGER"), 
+         Non_Manager_AsstDean = title == "Assistant Dean" & 
+           !(last_name %in% c("ALBRINCK", 
+                  "PFLIEGER", "LEE", "KLATT", "STROUD-PHILLIPS")) , 
+          Group = ifelse(AIM, "AIM",
+                         ifelse(Non_Manager_AsstDean, 
+                          "AsstDean", 
+                          "Other")))   |>
+  
+  group_by(Date, AIM) |>
+  summarize(sum_salaries = sum(annual_fte_adjusted_salary, na.rm = TRUE), 
+            fte = sum(full_time_equivalent)) |>
+  group_by(AIM) |>
+  mutate(`%_change` = (sum_salaries - sum_salaries[
+    Date == min(Date)])/sum_salaries[Date == min(Date)], 
+    `%_change` = round(`%_change` * 100, 1), 
+    sum_salaries = scales::dollar(sum_salaries), 
+    fte = round(fte, 1))  |>
+  pivot_wider(names_from = AIM, values_from = c("sum_salaries", "%_change", "fte")) 
+
+
+kbl(AIM.salaries, 
+      col.names = c("Date", "SAA", "AIM", "SAA", "AIM", "SAA", "AIM")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  add_header_above(c(" ", "Total Salaries" = 2, "% Change, Total Salaries" = 2, "FTE" = 2))
+  
+
+
+```
+
