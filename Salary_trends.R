@@ -35,18 +35,20 @@ salaries |>
   mutate(AIM = last_name %in% c("ZENZ", "MCMILLAN", "SCHUTH", "PFLIEGER"), 
          Non_Manager_AsstDean = title == "Assistant Dean" & 
            !(last_name %in% c("ALBRINCK", 
-                  "PFLIEGER", "LEE", "KLATT")) , 
+                  "PFLIEGER", "LEE", "KLATT", "STROUD-PHILLIPS")) , 
           Group = ifelse(AIM, "AIM",
                          ifelse(Non_Manager_AsstDean, 
                           "AsstDean", 
                           "Other")))   |>
   
-  group_by(Date, Group) |>
-  summarize(sum_salaries = sum(annual_fte_adjusted_salary, na.rm = TRUE)) |>
-  group_by(Date) |>
-  mutate(prop_SAA = sum_salaries/sum(sum_salaries))|>
-  filter(Group != "Other") |>
-  pivot_wider(names_from = Group, values_from = c("sum_salaries", "prop_SAA"))
+  group_by(Date, AIM) |>
+  summarize(sum_salaries = sum(annual_fte_adjusted_salary, na.rm = TRUE), 
+            fte = sum(full_time_equivalent)) |>
+  group_by(AIM) |>
+  mutate(prop_change = (sum_salaries - sum_salaries[
+    Date == min(Date)])/sum_salaries[Date == min(Date)]) |>
+  pivot_wider(names_from = AIM, values_from = c("sum_salaries", "prop_change", "fte"))
+
 
 
 
