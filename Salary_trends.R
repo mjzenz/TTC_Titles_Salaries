@@ -121,6 +121,7 @@ salary.change |>
                                 "L&S Honors Program"),
                               "Central Student Services",
                               "Department/Other"))) |>
+  filter( `Real % Salary Change` < 100) |>
   ggplot(aes(x = `L&S Area`, y = `Real % Salary Change`,
              Group = employee_category)) + 
   geom_boxplot(aes(fill = employee_category))
@@ -129,7 +130,7 @@ salary.change |>
 ###Admin Limited salary changes
 ls.admin.limited <- salary.change |>
   filter(division == "College of Letters & Science") |>
-  filter(department == "Administration") # |>
+  filter(department == "Administration")  |>
   filter(employee_category == "Limited Appointee")
 
 
