@@ -35,6 +35,7 @@ person.ids <- salaries |>
   unique() |>
   mutate(ID = str_pad(1:n(), width = 5, side = "left", pad = "0"))
 
+ls.pods <- read_excel("ls_pods.xlsx")
 
 salary.data <-   salaries|>
   left_join(person.ids, by = c("last_name", "first_name")) |>
@@ -68,6 +69,7 @@ salary.data <-   salaries|>
          JobGroup = substr(job_code, 1, 2), 
          JobNumber = substr(job_code, 3, 5)) |>
   left_join(inflation.index, by = c("Date")) |>
+  left_join(job.groups, by = "JobGroup") |>
   mutate(`2021 Index` = inflation.index[which(inflation.index$Date=="2021-11-01"),]$CPIAUCSL / CPIAUCSL,
          `FTE Adjusted Salary (2021 Dollars)` = annual_fte_adjusted_salary * `2021 Index`) |>
   select(-current_annual_contracted_salary) 
@@ -140,3 +142,36 @@ ls.saa.limited <- salary.change |>
   filter(department == "Admin:Student Academic Affairs") |>
   filter(employee_category == "Limited Appointee")
 
+###output list of departments in L&S
+# salary.data |>
+#   ungroup() |>
+#   filter(Date == max(Date)) |>
+#   filter(division == "College of Letters & Science") |>
+#   select(department) |>
+#   unique() |>
+#   openxlsx::write.xlsx(file = "ls_departments.xlsx")
+
+
+##### ls pod breakdown
+
+title.div.latest.salary <- salary.data |>
+        ungroup() |>
+        filter(Date == max(Date)) |>
+        group_by(division, JobGroupDescr, title) |>
+        summarize(fte = sum(full_time_equivalent, na.rm = TRUE),
+                  q1 = quantile(annual_fte_adjusted_salary, 
+                                probs = .25, na.rm = TRUE),
+                  median = median(annual_fte_adjusted_salary, na.rm = TRUE),
+                  mean = mean(annual_fte_adjusted_salary, na.rm = TRUE),
+                  q3 = quantile(annual_fte_adjusted_salary, 
+                                probs = .75, na.rm = TRUE))
+
+ls.pods.fte <- salary.data |>
+  ungroup() |>
+  filter(Date == max(Date)) |>
+  filter(division == "College of Letters & Science") |>
+  inner_join(ls.pods, by = "department") |>
+  filter(JobGroup %in% c("FN", "HR", "SC", "AD")) |>
+  group_by(pod, JobGroup) |>
+  summarize(fte = sum(full_time_equivalent, na.rm = TRUE)) |>
+  pivot_wider(names_from = pod, values_from = fte) 
